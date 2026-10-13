@@ -48,3 +48,40 @@ No hay prórroga: suban avances parciales con commits pequeños durante la prueb
 | [`test-manager-library-3145556-page`](https://github.com/code-sena/test-manager-library-3145556-page) | Sitio público estático de presentación |
 | [`test-manager-library-3145556-infra`](https://github.com/code-sena/test-manager-library-3145556-infra) | Contenedores, red, volúmenes y motor de base de datos vacío |
 | [`test-manager-library-3145556-tool`](https://github.com/code-sena/test-manager-library-3145556-tool) | Utilidades: sembrador de datos de demostración |
+
+---
+
+## Cómo correr el frontend (T-22)
+
+```bash
+cp .env.example .env        # VITE_API_URL=http://localhost:8000/api/v1
+npm install
+npm run dev                 # http://localhost:5173
+npm test                    # pruebas con Vitest y Testing Library
+npm run build               # build de producción en dist/
+```
+
+Con Docker: `docker build --build-arg VITE_API_URL=http://localhost:8000/api/v1 -t library-app . && docker run -p 5173:5173 library-app` (o `docker compose up` desde `infra`). La API debe permitir el origen `http://localhost:5173` (`CORS_ORIGIN`).
+
+## Recorrido de punta a punta
+
+1. **Login** con el usuario administrador definido en el entorno de la API.
+2. **Bibliotecarios** (solo admin): crear un bibliotecario.
+3. **Catálogo**: el admin crea libros, edita, da de baja y sube portadas (JPG/PNG, máx. 2 MB); todos buscan por texto y categoría.
+4. **Socios**: crear y buscar; el detalle muestra los libros sin devolver.
+5. **Prestar**: elegir socio y de 1 a 3 libros; los errores del servidor (sin ejemplares, tope de 3, socio con vencidos) se muestran en español.
+6. **Préstamos**: filtrar por fechas, estado y socio; **Devolver** una línea a la vez.
+7. **Vencidos**: ordenados por días de retraso.
+8. **Reporte** (solo admin): libros más prestados en un rango de fechas.
+
+## Estructura
+
+```text
+src/
+├── api/client.js        # fetch con Bearer; convierte {code, message, details} en ApiError
+├── auth/AuthContext.jsx # sesión en sessionStorage, expira a las 8 h, cierra sesión ante un 401
+├── components/          # Layout, Pagination, ErrorBanner, RoleGuard
+└── pages/               # Login, Books, Members, NewLoan, Loans, Overdue, Report, Users
+```
+
+Notas: la portada se pide con `fetch` y se muestra como blob porque `<img>` no envía el token. Las rutas y los botones de administración solo se muestran al rol `admin`, pero quien manda es la API (403).
